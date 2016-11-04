@@ -261,7 +261,7 @@ postprocess_face_infos(Settings const & settings,
 
     ProgressCounter face_counter("\tPostprocessing face infos",
         face_projection_infos->size());
-    #pragma omp parallel for schedule(dynamic)
+//  #pragma omp parallel for schedule(dynamic)
 #if !defined(_MSC_VER)
     for (std::size_t i = 0; i < face_projection_infos->size(); ++i) {
 #else
