@@ -22,6 +22,21 @@ TEX_NAMESPACE_BEGIN
 #define MAX_HOLE_NUM_FACES 100
 #define MAX_HOLE_PATCH_SIZE 100
 
+template <typename T>
+T clamp_nan_low(T const & v, T const & hi, T const & lo) {
+    return (v > lo) ? ((v < hi) ? v : hi) : lo;
+}
+
+template <typename T>
+T clamp_nan_hi(T const & v, T const & hi, T const & lo) {
+    return (v < hi) ? ((v > lo) ? v : lo) : hi;
+}
+
+template <typename T>
+T clamp(T const & v, T const & hi, T const & lo) {
+    return (v < lo) ? lo : ((v > hi) ? hi : v);
+}
+
 void merge_vertex_projection_infos(std::vector<std::vector<VertexProjectionInfo> > * vertex_projection_infos) {
     /* Merge vertex infos within the same texture patch. */
     #pragma omp parallel for
@@ -82,27 +97,33 @@ generate_candidate(int label, TextureView const & texture_view,
 
             texcoords.push_back(pixel);
 
-            min_x = std::min(static_cast<int>(std::floor(pixel[0])) - texture_patch_border, min_x);
-            min_y = std::min(static_cast<int>(std::floor(pixel[1])) - texture_patch_border, min_y);
-            max_x = std::max(static_cast<int>(std::ceil(pixel[0])) + texture_patch_border, max_x);
-            max_y = std::max(static_cast<int>(std::ceil(pixel[1])) + texture_patch_border, max_y);
+            min_x = std::min(static_cast<int>(std::floor(pixel[0])), min_x);
+            min_y = std::min(static_cast<int>(std::floor(pixel[1])), min_y);
+            max_x = std::max(static_cast<int>(std::ceil(pixel[0])), max_x);
+            max_y = std::max(static_cast<int>(std::ceil(pixel[1])), max_y);
         }
     }
+
+    /* Check for valid projections/erroneous labeling files. */
+    assert(min_x >= 0);
+    assert(min_y >= 0);
+    assert(max_x < view_image->width());
+    assert(max_y < view_image->height());
+
+    int width = max_x - min_x + 1;
+    int height = max_y - min_y + 1;
+
+    /* Add border and adjust min accordingly. */
+    width += 2 * texture_patch_border;
+    height += 2 * texture_patch_border;
+    min_x -= texture_patch_border;
+    min_y -= texture_patch_border;
 
     /* Calculate the relative texcoords. */
     math::Vec2f min(min_x, min_y);
     for (std::size_t i = 0; i < texcoords.size(); ++i) {
         texcoords[i] = texcoords[i] - min;
     }
-
-    int const width = max_x - min_x;
-    int const height = max_y - min_y;
-
-    /* Check for valid projections/erroneous labeling files. */
-    assert(min_x >= 0 - texture_patch_border);
-    assert(min_y >= 0 - texture_patch_border);
-    assert(max_x < view_image->width() + texture_patch_border);
-    assert(max_y < view_image->height() + texture_patch_border);
 
     mve::ByteImage::Ptr byte_image;
     byte_image = mve::image::crop(view_image, width, height, min_x, min_y, *math::Vec3uc(255, 0, 255));
@@ -271,7 +292,7 @@ bool fill_hole(std::vector<std::size_t> const & hole, UniGraph const & graph,
         }
 
         /* According to the previous checks (vertex class within the origial
-         * mesh and boundary) there already has to be at least one projection
+         * mesh and boundary) there has to be at least one projection
          * of each border vertex in a common texture patch. */
         bool test = false;
         math::Vec2f vp0(0.0f), vp1(0.0f);
@@ -337,16 +358,17 @@ bool fill_hole(std::vector<std::size_t> const & hole, UniGraph const & graph,
                 /* Ensure numerical stability */
                 if (v01n * v02n < std::numeric_limits<float>::epsilon()) return false;
 
-                float alpha = std::acos(v01.dot(v02) / (v01n * v02n));
-                weights[g2l[v1]] += std::tan(alpha / 2.0f) / v01n;
-                weights[g2l[v2]] += std::tan(alpha / 2.0f) / v02n;
+                float calpha = v01.dot(v02) / (v01n * v02n);
+                float alpha = std::acos(clamp(calpha, -1.0f, 1.0f));
+                weights[g2l[v1]] += std::tan(alpha / 2.0f) / (v01n / 2.0f);
+                weights[g2l[v2]] += std::tan(alpha / 2.0f) / (v02n / 2.0f);
             }
 
             std::map<std::size_t, float>::iterator it;
             float sum = 0.0f;
             for (it = weights.begin(); it != weights.end(); ++it)
                 sum += it->second;
-            assert(sum > 0.0f);
+            if (sum < std::numeric_limits<float>::epsilon()) return false;
             for (it = weights.begin(); it != weights.end(); ++it)
                 it->second /= sum;
 
