@@ -8,11 +8,8 @@
  */
 
 #include <algorithm>
-<<<<<<< HEAD
 #include <cstdint>
 #include <limits>
-=======
->>>>>>> 4fb24145a0201f7d18a1e3eb9ac2eecef624065c
 
 #include "lbp_graph.h"
 

@@ -150,15 +150,11 @@ calculate_face_projection_infos(mve::TriangleMesh::ConstPtr mesh,
         std::vector<std::pair<std::size_t, FaceProjectionInfo> > projected_face_view_infos;
 
         #pragma omp for schedule(dynamic)
-<<<<<<< HEAD
 #if !defined(_MSC_VER)
         for (std::uint16_t j = 0; j < texture_views->size(); ++j) {
 #else
         for (std::int32_t j = 0; j < texture_views->size(); ++j) {
 #endif
-=======
-        for (std::uint16_t j = 0; j < static_cast<std::uint16_t>(num_views); ++j) {
->>>>>>> 4fb24145a0201f7d18a1e3eb9ac2eecef624065c
             view_counter.progress<SIMPLE>();
 
             TextureView * texture_view = &texture_views->at(j);

@@ -20,7 +20,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if(WIN32)
-    set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../mve/3rdparty")
+    set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../mve/3rdparty" CACHE PATH "Path to 3rdparty root)
     set(JPEG_NAMES "libjpeg")
 endif()
 
