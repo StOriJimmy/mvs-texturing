@@ -14,7 +14,7 @@
 # An includer may set MVE_ROOT to a mve installation root to tell this
 # module where to look.
 
-set(MVE_INCLUDE_DIR ${MVE_ROOT}/libs)# CACHE PATH "MVE include dir")
+set(MVE_INCLUDE_DIR ${MVE_ROOT}/libs CACHE PATH "MVE include dir")
 message("set mvs include dir: ${MVE_INCLUDE_DIR}")
 find_library(MVE_DMRECON_LIBRARY_RELEASE NAMES mve_dmrecon
 	HINTS ${MVE_ROOT}/libs/dmrecon
