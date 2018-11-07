@@ -151,9 +151,9 @@ calculate_face_projection_infos(mve::TriangleMesh::ConstPtr mesh,
 
         #pragma omp for schedule(dynamic)
 #if !defined(_MSC_VER)
-        for (std::uint16_t j = 0; j < texture_views->size(); ++j) {
+        for (std::uint16_t j = 0; j < static_cast<std::uint16_t>(num_views); ++j) {
 #else
-        for (std::int32_t j = 0; j < texture_views->size(); ++j) {
+        for (std::int32_t j = 0; j < num_views; ++j) {
 #endif
             view_counter.progress<SIMPLE>();
 
@@ -261,7 +261,7 @@ postprocess_face_infos(Settings const & settings,
 
     ProgressCounter face_counter("\tPostprocessing face infos",
         face_projection_infos->size());
-//  #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic)
 #if !defined(_MSC_VER)
     for (std::size_t i = 0; i < face_projection_infos->size(); ++i) {
 #else
@@ -301,7 +301,7 @@ postprocess_face_infos(Settings const & settings,
 
             /* Clamp to percentile and normalize. */
             float normalized_quality = std::min(1.0f, info.quality / percentile);
-            float data_cost = (1.0f - normalized_quality) * MRF_MAX_ENERGYTERM;
+            float data_cost = (1.0f - normalized_quality);
             data_costs->set_value(i, info.view_id, data_cost);
         }
 
@@ -320,9 +320,10 @@ calculate_data_costs(mve::TriangleMesh::ConstPtr mesh, std::vector<TextureView> 
     std::size_t const num_faces = mesh->get_faces().size() / 3;
     std::size_t const num_views = texture_views->size();
 
-    assert(num_faces < std::numeric_limits<std::uint32_t>::max());
-    assert(num_views < std::numeric_limits<std::uint16_t>::max());
-    assert(MRF_MAX_ENERGYTERM < std::numeric_limits<float>::max());
+    if (num_faces > std::numeric_limits<std::uint32_t>::max())
+        throw std::runtime_error("Exeeded maximal number of faces");
+    if (num_views > std::numeric_limits<std::uint16_t>::max())
+        throw std::runtime_error("Exeeded maximal number of views");
 
     FaceProjectionInfos face_projection_infos(num_faces);
     calculate_face_projection_infos(mesh, texture_views, settings, &face_projection_infos);
